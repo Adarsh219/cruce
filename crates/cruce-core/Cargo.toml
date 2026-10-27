@@ -1,0 +1,36 @@
+[package]
+name = "cruce-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "High-performance Linux core engine for Cruce (UMU & Proton gaming launcher)"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+tempfile = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+md-5 = { workspace = true }
+walkdir = { workspace = true }
+regex = { workspace = true }
+dirs = "5.0"
+nix = { version = "0.31.3", features = ["process", "signal", "fs"] }
+uuid = { version = "1.29.0", features = ["v4"] }
+zbus = "5.5"
+libc = "0.2.191"
+memchr = "2.8.3"
+shlex = "2.0.1"
+pelite = "0.10.0"
+image = { version = "0.25.10", default-features = false, features = ["ico", "png"] }
+which = "8.0.6"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "blocking"] }
+sha1 = "0.10"
+tar = "0.4"
+flate2 = "1.0"
+xz2 = "0.1"
+zip = { version = "9.1.3", default-features = false, features = ["deflate"] }
+
+[dev-dependencies]
+tracing-subscriber = "0.3"
