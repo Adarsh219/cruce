@@ -1,0 +1,23 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/cruce-core",
+    "crates/cruce-app",
+]
+
+[workspace.package]
+version = "0.3.0"
+edition = "2021"
+authors = ["Adarsh219 <adarshsingh8312@protonmail.com>"]
+license = "MIT OR Apache-2.0"
+
+[workspace.dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tempfile = "3.14"
+thiserror = "2.0"
+log = "0.4"
+tracing = "0.1"
+md-5 = "0.10"
+walkdir = "2.5"
+regex = "1.11"

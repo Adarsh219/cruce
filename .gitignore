@@ -1,0 +1,17 @@
+/target
+**/*.rs.bk
+
+# Reference repo
+Crucible/
+
+# Node / Frontend
+node_modules/
+dist/
+.vite/
+ui/test-screenshots/
+test-screenshots/
+
+# Temp & logs
+*.tmp
+*.log
+.DS_Store
