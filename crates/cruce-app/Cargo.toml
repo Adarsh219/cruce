@@ -1,0 +1,26 @@
+[package]
+name = "cruce-app"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+cruce-core = { path = "../cruce-core" }
+tauri = { version = "2", features = ["tray-icon", "custom-protocol"] }
+tauri-plugin-opener = "2"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+md-5 = "0.10"
+tokio = { version = "1.40", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
+rfd = "0.15"
+libc = "0.2"
+base64 = "0.22"
+
+[dev-dependencies]
+tempfile = "3.14"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
