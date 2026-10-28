@@ -18,22 +18,22 @@ pub struct ActiveSession {
 }
 
 pub struct AppState {
-    pub store: Mutex<GameStore>,
+    pub store: Arc<Mutex<GameStore>>,
     pub state_tracker: Arc<GameStateTracker>,
     pub launcher: Arc<GameLauncher>,
     pub proton_manager: Arc<ProtonManager>,
     pub cancel_download_flag: Arc<AtomicBool>,
-    pub active_sessions: Mutex<HashMap<String, ActiveSession>>,
+    pub active_sessions: Arc<Mutex<HashMap<String, ActiveSession>>>,
 }
 
 impl AppState {
     pub fn new() -> Self {
         let state_tracker = Arc::new(GameStateTracker::new());
         let launcher = Arc::new(GameLauncher::new(state_tracker.clone()));
-        let store = Mutex::new(GameStore::new(None, None, None));
+        let store = Arc::new(Mutex::new(GameStore::new(None, None, None)));
         let proton_manager = Arc::new(ProtonManager::new(Paths::steam_compat_dir()));
         let cancel_download_flag = Arc::new(AtomicBool::new(false));
-        let active_sessions = Mutex::new(HashMap::new());
+        let active_sessions = Arc::new(Mutex::new(HashMap::new()));
 
         Self {
             store,
@@ -53,14 +53,14 @@ impl AppState {
     ) -> Self {
         let state_tracker = Arc::new(GameStateTracker::new());
         let launcher = Arc::new(GameLauncher::new(state_tracker.clone()));
-        let store = Mutex::new(GameStore::new(
+        let store = Arc::new(Mutex::new(GameStore::new(
             Some(games_dir),
             Some(prefixes_dir),
             Some(global_config_path),
-        ));
+        )));
         let proton_manager = Arc::new(ProtonManager::new(compat_dir));
         let cancel_download_flag = Arc::new(AtomicBool::new(false));
-        let active_sessions = Mutex::new(HashMap::new());
+        let active_sessions = Arc::new(Mutex::new(HashMap::new()));
 
         Self {
             store,

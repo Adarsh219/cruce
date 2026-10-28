@@ -162,8 +162,8 @@ pub fn add_game(
     store.add_game(new_cfg.clone()).map_err(|e| e.to_string())?;
 
     // Try in-memory PE icon extraction
-    let safe = safe_name(&title);
-    let artwork_dir = Paths::artwork_dir().join(format!("exe_{}", safe));
+    let exe_key = cruce_core::artwork::ArtworkManager::artwork_key(&exe, None, &title);
+    let artwork_dir = Paths::artwork_dir().join(&exe_key);
     let _ = fs::create_dir_all(&artwork_dir);
     let icon_png = artwork_dir.join("icon.png");
     let _ = extract_exe_icon(Path::new(&exe), &icon_png);
@@ -283,6 +283,8 @@ pub fn launch_game(app: AppHandle, state: State<'_, AppState>, id: String) -> Re
     let uuid_clone = prepared.session_uuid.clone();
     let name_clone = resolved.name.clone();
     let app_clone = app.clone();
+    let sessions_clone = state.active_sessions.clone();
+    let store_clone = state.store.clone();
     let started_at = Instant::now();
 
     thread::spawn(move || {
@@ -300,6 +302,12 @@ pub fn launch_game(app: AppHandle, state: State<'_, AppState>, id: String) -> Re
         }
 
         let elapsed = started_at.elapsed().as_secs();
+        if let Ok(mut sessions) = sessions_clone.lock() {
+            sessions.remove(&name_clone); // Dropping session automatically releases ScreensaverGuard
+        }
+        if let Ok(mut store) = store_clone.lock() {
+            let _ = store.record_playtime(&name_clone, elapsed);
+        }
         tracker_clone.force_idle(&name_clone);
         let _ = app_clone.emit(
             "game_state_changed",
@@ -329,6 +337,10 @@ pub fn stop_game(app: AppHandle, state: State<'_, AppState>, id: String) -> Resu
 
     if let Some(key) = target_key {
         if let Some(session) = sessions.remove(&key) {
+            let elapsed = session.started_at.elapsed().as_secs();
+            if let Ok(mut store) = state.store.lock() {
+                let _ = store.record_playtime(&key, elapsed);
+            }
             state.state_tracker.transition(&key, GameState::Stopping);
             let _ = stop_game_session(session.pid, &session.session_uuid);
             state.state_tracker.force_idle(&key);

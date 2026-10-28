@@ -2,7 +2,7 @@ use crate::error::{CruceError, Result};
 use crate::paths::{safe_name, Paths};
 use crate::pe_icon::extract_exe_icon;
 use crate::types::GameConfig;
-use md5::{Digest, Md5};
+use sha1::{Digest, Sha1};
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
@@ -16,7 +16,7 @@ pub fn game_desktop_path(game_name: &str) -> PathBuf {
 /// Path to the cached icon inside the game's artwork folder.
 pub fn game_icon_path(game_name: &str, exe_path: &str) -> PathBuf {
     let key = if !exe_path.is_empty() {
-        let mut hasher = Md5::new();
+        let mut hasher = Sha1::new();
         hasher.update(exe_path.trim().to_lowercase().as_bytes());
         let digest = format!("{:x}", hasher.finalize());
         format!("exe_{}", &digest[..16.min(digest.len())])
@@ -54,7 +54,11 @@ pub fn create_game_shortcut(game: &GameConfig, launcher_bin_path: Option<&str>) 
 
     // Escape executable command
     let launcher_bin = launcher_bin_path.unwrap_or("crucible");
-    let exec_cmd = format!("\"{}\" --launch \"{}\"", launcher_bin, game.name.replace('"', "\\\""));
+    let exec_cmd = format!(
+        "\"{}\" --launch \"{}\"",
+        launcher_bin,
+        game.name.replace('"', "\\\"")
+    );
 
     // Resolve or extract icon
     let mut icon_path_str = "crucible".to_string();
@@ -67,7 +71,8 @@ pub fn create_game_shortcut(game: &GameConfig, launcher_bin_path: Option<&str>) 
         }
     }
 
-    let sanitized_name: String = game.name
+    let sanitized_name: String = game
+        .name
         .chars()
         .filter(|&c| c != '\n' && c != '\r' && c != ';')
         .collect();
