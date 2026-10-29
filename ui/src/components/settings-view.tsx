@@ -1,4 +1,4 @@
-import { Bug, Check, Cpu, Palette, RotateCcw, SlidersHorizontal } from "lucide-react"
+import { Bug, Check, Cpu, Palette, SlidersHorizontal } from "lucide-react"
 import type { FontId, LogLevel, ThemeId } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { useCruce } from "./store"
@@ -13,13 +13,13 @@ const themes: { id: ThemeId; name: string; swatch: [string, string, string] }[] 
 ]
 
 export function SettingsView() {
-  const { settings: s, updateSettings: set, installedRunnerNames, toast, restoreDemo } = useCruce()
+  const { settings: s, updateSettings: set, installedRunnerNames, toast } = useCruce()
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-5 py-8 sm:px-8">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Changes are saved to ~/.config/cruce/config.toml automatically.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Changes are saved to ~/.local/share/crucible-launcher/global_config.json automatically.</p>
       </header>
 
       <SectionCard title="General" icon={<SlidersHorizontal />}>
@@ -128,18 +128,6 @@ export function SettingsView() {
               options={(["error", "warn", "info", "debug", "trace"] as LogLevel[]).map((l) => ({ value: l, label: l[0].toUpperCase() + l.slice(1) }))}
             />
           </div>
-          {!isTauri() && (
-            <div className="flex flex-col gap-3 rounded-xl border border-border bg-background/30 p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm font-medium">Restore demo library</p>
-                <p className="text-xs text-muted-foreground">Bring back the sample games for exploring Cruce.</p>
-              </div>
-              <Btn size="sm" onClick={restoreDemo}>
-                <RotateCcw />
-                Restore
-              </Btn>
-            </div>
-          )}
         </div>
       </SectionCard>
 
