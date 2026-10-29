@@ -229,10 +229,45 @@ pub fn launch_game(app: AppHandle, state: State<'_, AppState>, id: String) -> Re
             .ok_or_else(|| format!("Game '{}' not found", id))?
     };
 
-    let resolved = {
+    let mut resolved = {
         let store = state.store.lock().map_err(|e| e.to_string())?;
         store.global_config.resolve(&game_cfg)
     };
+
+    // Check if game is already active
+    let current_state = state.state_tracker.get(&resolved.name);
+    if current_state != GameState::Idle {
+        return Err(format!(
+            "Game '{}' is already in {:?} state",
+            resolved.name, current_state
+        ));
+    }
+
+    // Validate executable exists
+    if resolved.exe_path.trim().is_empty() {
+        return Err(format!("No executable configured for '{}'", resolved.name));
+    }
+    let exe = Path::new(&resolved.exe_path);
+    if !exe.exists() {
+        return Err(format!("Executable not found:\n{}", resolved.exe_path));
+    }
+
+    // Resolve proton_path from proton_version if empty or invalid
+    if resolved.proton_path.trim().is_empty() || !Path::new(&resolved.proton_path).exists() {
+        let installed = state.proton_manager.scan_installed();
+        let target = if !resolved.proton_version.is_empty() {
+            installed
+                .into_iter()
+                .find(|r| r.name == resolved.proton_version || r.version == resolved.proton_version)
+        } else {
+            installed.into_iter().next()
+        };
+        if let Some(runner) = target {
+            resolved.proton_path = runner.path;
+        } else {
+            return Err("No compatible Proton runner found. Please download a runner from Settings -> Runners.".to_string());
+        }
+    }
 
     let umu_bin = find_umu_binary();
     let prepared = state
@@ -570,13 +605,31 @@ pub fn open_wine_tool(state: State<'_, AppState>, id: String, tool: String) -> R
             .find(|g| safe_name(&g.name) == id || g.name == id)
             .ok_or_else(|| format!("Game '{}' not found", id))?;
 
-        let prefix = if !game.prefix_path.is_empty() {
-            PathBuf::from(&game.prefix_path)
+        let resolved = store.global_config.resolve(game);
+        let prefix = if !resolved.prefix_path.is_empty() {
+            PathBuf::from(&resolved.prefix_path)
         } else {
-            Paths::prefixes_dir().join(format!("{}prefix", safe_name(&game.name)))
+            Paths::prefixes_dir().join(format!("{}prefix", safe_name(&resolved.name)))
         };
 
-        (prefix, game.proton_path.clone())
+        let mut ppath = resolved.proton_path.clone();
+        if ppath.trim().is_empty() || !Path::new(&ppath).exists() {
+            let installed = state.proton_manager.scan_installed();
+            let target = if !resolved.proton_version.is_empty() {
+                installed.into_iter().find(|r| {
+                    r.name == resolved.proton_version || r.version == resolved.proton_version
+                })
+            } else {
+                installed.into_iter().next()
+            };
+            if let Some(r) = target {
+                ppath = r.path;
+            } else {
+                return Err("No compatible Proton runner found. Please install a Proton runner first.".to_string());
+            }
+        }
+
+        (prefix, ppath)
     };
 
     let umu_bin = find_umu_binary();
