@@ -926,13 +926,26 @@ pub fn get_game_logs(id: String) -> Result<Vec<(String, String)>, String> {
 
         if let Some(latest) = files.last() {
             if let Ok(content) = fs::read_to_string(latest) {
-                let lines: Vec<(String, String)> = content
-                    .lines()
-                    .take(200)
+                let all_lines: Vec<&str> = content.lines().collect();
+                let slice = if all_lines.len() > 300 {
+                    &all_lines[all_lines.len() - 300..]
+                } else {
+                    &all_lines[..]
+                };
+                let lines: Vec<(String, String)> = slice
+                    .iter()
                     .map(|l| {
-                        let level = if l.to_lowercase().contains("err") {
+                        let lower = l.to_lowercase();
+                        let level = if lower.contains("error")
+                            || lower.contains("fatal")
+                            || lower.contains("panic")
+                            || lower.contains("failed")
+                            || lower.contains("unhandled exception")
+                        {
+                            "error".to_string()
+                        } else if lower.contains("warn") || lower.contains("err") {
                             "warn".to_string()
-                        } else if l.to_lowercase().contains("info") {
+                        } else if lower.contains("info") {
                             "info".to_string()
                         } else {
                             "debug".to_string()
