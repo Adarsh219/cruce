@@ -7,6 +7,50 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
 
+pub fn days_ago_from_iso(iso: &str) -> Option<u32> {
+    let trimmed = iso.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    let date_str = trimmed.split('T').next()?;
+    let parts: Vec<&str> = date_str.split('-').collect();
+    if parts.len() < 3 {
+        return None;
+    }
+    let year: i64 = parts[0].parse().ok()?;
+    let month: usize = parts[1].parse().ok()?;
+    let day: i64 = parts[2].parse().ok()?;
+
+    let mut date_days = (year - 1970) * 365;
+    for yr in 1970..year {
+        if (yr % 4 == 0 && yr % 100 != 0) || (yr % 400 == 0) {
+            date_days += 1;
+        }
+    }
+    let leap = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+    let month_days = [
+        31,
+        if leap { 29 } else { 28 },
+        31, 30, 31, 30, 31, 31, 30, 31, 30, 31,
+    ];
+    for &d in month_days.iter().take((month.saturating_sub(1)).min(11)) {
+        date_days += d as i64;
+    }
+    date_days += day - 1;
+
+    let now_secs = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()?
+        .as_secs();
+    let current_days = (now_secs / 86400) as i64;
+
+    if current_days >= date_days {
+        Some((current_days - date_days) as u32)
+    } else {
+        Some(0)
+    }
+}
+
 pub fn image_to_data_url(path: &Path) -> Option<String> {
     if !path.exists() {
         return None;
@@ -171,13 +215,7 @@ impl Game {
         let hue = ((digest[0] as u32) * 360) / 256;
 
         let playtime_min = (cfg.playtime_seconds / 60) as u32;
-
-        let last_played_days_ago = if !cfg.last_played.is_empty() {
-            // Simple heuristic or default to 0/None
-            Some(0)
-        } else {
-            None
-        };
+        let last_played_days_ago = days_ago_from_iso(&cfg.last_played);
 
         let mut env_list = Vec::new();
         let mut idx = 0;
@@ -585,5 +623,19 @@ mod tests {
         assert_eq!(roundtrip.custom_overrides, global.custom_overrides);
         assert_eq!(roundtrip.enable_gamemode, global.enable_gamemode);
         assert_eq!(roundtrip.enable_mangohud, global.enable_mangohud);
+    }
+
+    #[test]
+    fn test_days_ago_from_iso() {
+        assert_eq!(days_ago_from_iso(""), None);
+        assert_eq!(days_ago_from_iso("invalid-date"), None);
+
+        // Date in the future returns Some(0)
+        assert_eq!(days_ago_from_iso("2099-01-01T00:00:00Z"), Some(0));
+
+        // Date in the past (e.g. 1970) returns large positive number
+        let days = days_ago_from_iso("1970-01-01T00:00:00Z");
+        assert!(days.is_some());
+        assert!(days.unwrap() > 18000);
     }
 }
