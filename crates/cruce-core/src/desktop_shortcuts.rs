@@ -53,7 +53,9 @@ pub fn create_game_shortcut(game: &GameConfig, launcher_bin_path: Option<&str>) 
     let sname = safe_name(&game.name);
 
     // Escape executable command
-    let launcher_bin = launcher_bin_path.unwrap_or("crucible");
+    let current_exe = std::env::current_exe().ok().and_then(|p| p.to_str().map(|s| s.to_string()));
+    let default_launcher = current_exe.unwrap_or_else(|| "cruce".to_string());
+    let launcher_bin = launcher_bin_path.unwrap_or(&default_launcher);
     let exec_cmd = format!(
         "\"{}\" --launch \"{}\"",
         launcher_bin,
@@ -61,7 +63,7 @@ pub fn create_game_shortcut(game: &GameConfig, launcher_bin_path: Option<&str>) 
     );
 
     // Resolve or extract icon
-    let mut icon_path_str = "crucible".to_string();
+    let mut icon_path_str = "cruce".to_string();
     if !game.exe_path.is_empty() {
         let icon_file = game_icon_path(&game.name, &game.exe_path);
         if icon_file.exists() {
