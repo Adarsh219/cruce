@@ -7,7 +7,6 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
-use tempfile::tempdir;
 use xz2::read::XzDecoder;
 
 const GITHUB_API_TIMEOUT: Duration = Duration::from_secs(10);
@@ -253,6 +252,11 @@ impl ProtonManager {
                     None => continue,
                 };
 
+                // Ignore hidden staging directories (e.g. .GE-Proton.installing)
+                if name.starts_with('.') {
+                    continue;
+                }
+
                 let mut version = "unknown".to_string();
                 let version_file = path.join("version");
                 let alt_version_file = path.join("VERSION");
@@ -432,14 +436,22 @@ impl ProtonManager {
             ))
         })?;
 
-        // 2. Download archive to temp file with progress callback (0%..70%)
-        let tmp_dir = tempdir().map_err(CruceError::IoGeneric)?;
+        // 2. Download archive with progress callback (0%..70%)
+        // Staged inside compat_dir to guarantee same-filesystem atomic renames without EXDEV errors
+        let stage_uuid = uuid::Uuid::new_v4().to_string();
+        let stage_prefix = format!(".{}.{}", tag, &stage_uuid[..8]);
+        let stage_root = self.compat_dir.join(format!("{}.stage", stage_prefix));
+        fs::create_dir_all(&stage_root).map_err(|e| CruceError::Io {
+            path: stage_root.clone(),
+            source: e,
+        })?;
+
         let suffix = if source.asset_suffix.ends_with(".xz") {
             ".tar.xz"
         } else {
             ".tar.gz"
         };
-        let tar_path = tmp_dir.path().join(format!("runner_{}{}", tag, suffix));
+        let tar_path = stage_root.join(format!("runner_{}{}", tag, suffix));
 
         let stream_client = reqwest::blocking::Client::builder()
             .timeout(DOWNLOAD_STREAM_TIMEOUT)
@@ -447,8 +459,15 @@ impl ProtonManager {
             .build()
             .unwrap_or_else(|_| reqwest::blocking::Client::new());
 
-        let mut stream_resp = stream_client.get(&url).send()?;
+        let mut stream_resp = match stream_client.get(&url).send() {
+            Ok(r) => r,
+            Err(e) => {
+                let _ = fs::remove_dir_all(&stage_root);
+                return Err(e.into());
+            }
+        };
         if !stream_resp.status().is_success() {
+            let _ = fs::remove_dir_all(&stage_root);
             return Err(CruceError::Validation(format!(
                 "Download failed with HTTP {}",
                 stream_resp.status()
@@ -457,29 +476,44 @@ impl ProtonManager {
 
         let total_size = stream_resp.content_length().unwrap_or(asset_size);
 
-        let mut out_file = File::create(&tar_path).map_err(|e| CruceError::Io {
-            path: tar_path.clone(),
-            source: e,
-        })?;
+        let mut out_file = match File::create(&tar_path) {
+            Ok(f) => f,
+            Err(e) => {
+                let _ = fs::remove_dir_all(&stage_root);
+                return Err(CruceError::Io {
+                    path: tar_path,
+                    source: e,
+                });
+            }
+        };
 
         let mut downloaded: u64 = 0;
         let mut buf = [0u8; DOWNLOAD_CHUNK_SIZE];
 
         loop {
             if is_cancelled() {
-                let _ = fs::remove_file(&tar_path);
+                let _ = fs::remove_dir_all(&stage_root);
                 return Err(CruceError::Cancelled);
             }
 
-            let n = stream_resp.read(&mut buf).map_err(CruceError::IoGeneric)?;
+            let n = match stream_resp.read(&mut buf) {
+                Ok(n) => n,
+                Err(e) => {
+                    let _ = fs::remove_dir_all(&stage_root);
+                    return Err(CruceError::IoGeneric(e));
+                }
+            };
             if n == 0 {
                 break;
             }
 
-            out_file.write_all(&buf[..n]).map_err(|e| CruceError::Io {
-                path: tar_path.clone(),
-                source: e,
-            })?;
+            if let Err(e) = out_file.write_all(&buf[..n]) {
+                let _ = fs::remove_dir_all(&stage_root);
+                return Err(CruceError::Io {
+                    path: tar_path,
+                    source: e,
+                });
+            }
 
             downloaded += n as u64;
 
@@ -494,7 +528,7 @@ impl ProtonManager {
         drop(out_file);
 
         if is_cancelled() {
-            let _ = fs::remove_file(&tar_path);
+            let _ = fs::remove_dir_all(&stage_root);
             return Err(CruceError::Cancelled);
         }
 
@@ -503,15 +537,19 @@ impl ProtonManager {
             cb(70, &format!("Extracting {}...", tag));
         }
 
-        let stage_uuid = uuid::Uuid::new_v4().to_string();
-        let staging_name = format!(".{}.{}.installing", tag, &stage_uuid[..8]);
-        let staged_dir = self.compat_dir.join(&staging_name);
+        let temp_extract_dir = stage_root.join("extract");
+        let staged_dir = stage_root.join("installed");
 
-        let temp_extract_dir = tmp_dir.path().join("extract");
-        let extracted_root = extract_tarball_safe(&tar_path, &temp_extract_dir)?;
+        let extracted_root = match extract_tarball_safe(&tar_path, &temp_extract_dir) {
+            Ok(p) => p,
+            Err(e) => {
+                let _ = fs::remove_dir_all(&stage_root);
+                return Err(e);
+            }
+        };
 
         if is_cancelled() {
-            let _ = fs::remove_dir_all(&temp_extract_dir);
+            let _ = fs::remove_dir_all(&stage_root);
             return Err(CruceError::Cancelled);
         }
 
@@ -521,24 +559,26 @@ impl ProtonManager {
         }
 
         if extracted_root != temp_extract_dir {
-            fs::rename(&extracted_root, &staged_dir).map_err(|e| CruceError::Io {
-                path: staged_dir.clone(),
-                source: e,
-            })?;
-        } else {
-            fs::create_dir_all(&staged_dir).map_err(|e| CruceError::Io {
-                path: staged_dir.clone(),
-                source: e,
-            })?;
-            for entry in fs::read_dir(&temp_extract_dir)
-                .map_err(|e| CruceError::Io {
-                    path: temp_extract_dir.clone(),
+            if let Err(e) = fs::rename(&extracted_root, &staged_dir) {
+                let _ = fs::remove_dir_all(&stage_root);
+                return Err(CruceError::Io {
+                    path: staged_dir,
                     source: e,
-                })?
-                .flatten()
-            {
-                let dest = staged_dir.join(entry.file_name());
-                fs::rename(entry.path(), dest).ok();
+                });
+            }
+        } else {
+            if let Err(e) = fs::create_dir_all(&staged_dir) {
+                let _ = fs::remove_dir_all(&stage_root);
+                return Err(CruceError::Io {
+                    path: staged_dir,
+                    source: e,
+                });
+            }
+            if let Ok(entries) = fs::read_dir(&temp_extract_dir) {
+                for entry in entries.flatten() {
+                    let dest = staged_dir.join(entry.file_name());
+                    fs::rename(entry.path(), dest).ok();
+                }
             }
         }
 
@@ -548,10 +588,15 @@ impl ProtonManager {
             let _ = fs::remove_dir_all(&final_dir);
         }
 
-        fs::rename(&staged_dir, &final_dir).map_err(|e| CruceError::Io {
-            path: final_dir.clone(),
-            source: e,
-        })?;
+        if let Err(e) = fs::rename(&staged_dir, &final_dir) {
+            let _ = fs::remove_dir_all(&stage_root);
+            return Err(CruceError::Io {
+                path: final_dir,
+                source: e,
+            });
+        }
+
+        let _ = fs::remove_dir_all(&stage_root);
 
         if let Some(cb) = progress_cb {
             cb(100, &format!("Installed {}", tag));
