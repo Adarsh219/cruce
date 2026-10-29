@@ -48,8 +48,8 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="mt-auto hidden p-3 md:block">
-        {active ? (
+      {active && (
+        <div className="mt-auto hidden p-3 md:block">
           <div className="rounded-xl border border-primary/25 bg-primary/[0.06] p-3">
             <p className="text-[11px] font-semibold tracking-widest text-primary uppercase">
               {active.status === "launching" ? "Launching" : "Now Playing"}
@@ -74,24 +74,8 @@ export function Sidebar() {
               Stop
             </button>
           </div>
-        ) : (
-          <div className="rounded-xl border border-border bg-card/50 p-3">
-            <p className="text-[11px] font-semibold tracking-widest text-muted-foreground/70 uppercase">System</p>
-            <dl className="mt-2.5 space-y-1.5 font-mono text-[11px]">
-              {[
-                ["GPU", "RX 7900 XTX"],
-                ["Driver", "RADV · Mesa 26.1"],
-                ["Session", "Wayland"],
-              ].map(([k, v]) => (
-                <div key={k} className="flex justify-between gap-2">
-                  <dt className="text-muted-foreground">{k}</dt>
-                  <dd className="truncate text-foreground/80">{v}</dd>
-                </div>
-              ))}
-            </dl>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
     </aside>
   )
 }
