@@ -1,6 +1,5 @@
 import { FileCode2, FolderOpen, Gamepad2, X } from "lucide-react"
 import { useEffect, useState } from "react"
-import { mockExecutables } from "@/lib/data"
 import { Dialog } from "../dialog"
 import { useCruce } from "../store"
 import { Btn, LabeledInput, PathInput, Select } from "../ui"
@@ -53,12 +52,6 @@ export function AddGameDialog() {
         setInstallDir(chosen)
       }
     }
-  }
-
-  const selectMock = (e: (typeof mockExecutables)[0]) => {
-    setExePath(`/home/deck/Games/${e.folder}/${e.exe}`)
-    setInstallDir(`/home/deck/Games/${e.folder}`)
-    setTitle(e.title)
   }
 
   const submit = () => {
@@ -134,25 +127,6 @@ export function AddGameDialog() {
           onChange={setRunner}
           options={runnerOptions.map((r) => ({ value: r, label: r }))}
         />
-
-        {!isTauri() && (
-          <div className="mt-2 rounded-xl border border-dashed border-border bg-card/40 p-3">
-            <p className="mb-2 text-xs font-medium text-muted-foreground">Web Preview Presets:</p>
-            <div className="flex flex-wrap gap-2">
-              {mockExecutables.map((m) => (
-                <button
-                  key={m.exe}
-                  type="button"
-                  role="option"
-                  onClick={() => selectMock(m)}
-                  className="rounded-lg border border-border bg-secondary/60 px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-                >
-                  {m.title}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       <footer className="flex items-center justify-end gap-2 border-t border-border px-6 py-4">

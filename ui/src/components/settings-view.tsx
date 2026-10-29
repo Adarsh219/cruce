@@ -143,7 +143,7 @@ export function SettingsView() {
         </div>
       </SectionCard>
 
-      <p className="pb-4 text-center font-mono text-xs text-muted-foreground">Cruce v0.3.0 · umu-launcher 1.2.9 · Tauri v2 / Rust</p>
+      <p className="pb-4 text-center font-mono text-xs text-muted-foreground">Cruce v0.3.0 · Tauri v2 / Rust Engine</p>
     </div>
   )
 }

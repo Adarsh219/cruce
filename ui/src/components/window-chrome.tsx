@@ -1,6 +1,7 @@
 import { Copy, Minus, Square, X } from "lucide-react"
 import { CruceLogo } from "./logo"
 import { useCruce } from "./store"
+import { cn } from "@/lib/utils"
 import { closeWindow, isTauri, minimizeWindow, toggleMaximizeWindow } from "@/lib/tauri"
 
 export function WindowChrome({
@@ -42,15 +43,13 @@ export function WindowChrome({
         <CruceLogo className="size-6" />
         <span className="text-sm font-semibold tracking-tight">Cruce</span>
         <span className="hidden rounded-md border border-border px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground sm:inline">
-          v0.9.2
+          v0.3.0
         </span>
       </div>
 
       <div className="hidden items-center gap-2 font-mono text-[11px] text-muted-foreground md:flex">
-        <span className="size-1.5 rounded-full bg-success" />
-        umu-run 1.2.9
-        <span className="text-border">|</span>
-        {running > 0 ? `${running} game running` : "Wayland · Mesa 26.1"}
+        <span className={cn("size-1.5 rounded-full bg-success", running > 0 && "animate-pulse")} />
+        {running > 0 ? `${running} ${running === 1 ? "game running" : "games running"}` : "Ready"}
       </div>
 
       <div className="flex h-full items-stretch" onDoubleClick={(e) => e.stopPropagation()}>
