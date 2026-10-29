@@ -302,26 +302,31 @@ pub fn launch_game(app: AppHandle, state: State<'_, AppState>, id: String) -> Re
         }
 
         let elapsed = started_at.elapsed().as_secs();
-        if let Ok(mut sessions) = sessions_clone.lock() {
-            sessions.remove(&name_clone); // Dropping session automatically releases ScreensaverGuard
+        let was_active = if let Ok(mut sessions) = sessions_clone.lock() {
+            sessions.remove(&name_clone).is_some() // Dropping session automatically releases ScreensaverGuard
+        } else {
+            false
+        };
+
+        if was_active {
+            if let Ok(mut store) = store_clone.lock() {
+                let _ = store.record_playtime(&name_clone, elapsed);
+            }
+            tracker_clone.force_idle(&name_clone);
+            let _ = app_clone.emit(
+                "game_state_changed",
+                serde_json::json!({
+                    "id": safe_name(&name_clone),
+                    "title": name_clone,
+                    "status": "idle",
+                    "playtimeDeltaSeconds": elapsed
+                }),
+            );
+            info!(
+                "Game '{}' session exited cleanly after {}s.",
+                name_clone, elapsed
+            );
         }
-        if let Ok(mut store) = store_clone.lock() {
-            let _ = store.record_playtime(&name_clone, elapsed);
-        }
-        tracker_clone.force_idle(&name_clone);
-        let _ = app_clone.emit(
-            "game_state_changed",
-            serde_json::json!({
-                "id": safe_name(&name_clone),
-                "title": name_clone,
-                "status": "idle",
-                "playtimeDeltaSeconds": elapsed
-            }),
-        );
-        info!(
-            "Game '{}' session exited cleanly after {}s.",
-            name_clone, elapsed
-        );
     });
 
     Ok(())
@@ -350,7 +355,8 @@ pub fn stop_game(app: AppHandle, state: State<'_, AppState>, id: String) -> Resu
                 serde_json::json!({
                     "id": safe_name(&key),
                     "title": key,
-                    "status": "idle"
+                    "status": "idle",
+                    "playtimeDeltaSeconds": elapsed
                 }),
             );
         }
