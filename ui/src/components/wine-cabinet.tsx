@@ -1,6 +1,6 @@
 import { Check, Download, HardDrive, Loader2, Trash2, Wine, X } from "lucide-react"
 import { useState } from "react"
-import { releases, sourceMeta } from "@/lib/data"
+import { sourceMeta } from "@/lib/data"
 import type { Runner, RunnerSource } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { useCruce } from "./store"

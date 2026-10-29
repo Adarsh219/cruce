@@ -1,10 +1,9 @@
-import { FileCode2, Gamepad2, Plus, RotateCcw, Wine } from "lucide-react"
+import { FileCode2, Gamepad2, Plus, Wine } from "lucide-react"
 import { useCruce } from "../store"
 import { Btn } from "../ui"
-import { isTauri } from "@/lib/tauri"
 
 export function EmptyLibrary() {
-  const { setAddDialogOpen, restoreDemo } = useCruce()
+  const { setAddDialogOpen } = useCruce()
   return (
     <div className="flex min-h-full items-center justify-center px-6 py-16">
       <div className="flex max-w-md flex-col items-center text-center">
@@ -32,12 +31,6 @@ export function EmptyLibrary() {
             <Plus />
             Add your first game
           </Btn>
-          {!isTauri() && (
-            <Btn size="lg" variant="ghost" onClick={restoreDemo}>
-              <RotateCcw />
-              Restore demo library
-            </Btn>
-          )}
         </div>
       </div>
     </div>
