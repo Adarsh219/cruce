@@ -84,7 +84,12 @@ export function OverviewTab({ game }: { game: Game }) {
             <Btn
               variant="secondary"
               onClick={() => {
-                if (isTauri()) openWineTool(game.id, "winecfg")
+                if (isTauri()) {
+                  openWineTool(game.id, "winecfg")
+                    .then(() => toast("Opening Winecfg", { description: "Wine configuration utility", tone: "info" }))
+                    .catch((e) => toast("Failed to open Winecfg", { description: String(e), tone: "danger" }))
+                  return
+                }
                 toast("Opening Winecfg", { description: "Wine configuration utility", tone: "info" })
               }}
             >
@@ -93,7 +98,12 @@ export function OverviewTab({ game }: { game: Game }) {
             <Btn
               variant="secondary"
               onClick={() => {
-                if (isTauri()) openWineTool(game.id, "regedit")
+                if (isTauri()) {
+                  openWineTool(game.id, "regedit")
+                    .then(() => toast("Opening Regedit", { description: "Wine registry editor", tone: "info" }))
+                    .catch((e) => toast("Failed to open Regedit", { description: String(e), tone: "danger" }))
+                  return
+                }
                 toast("Opening Regedit", { description: "Wine registry editor", tone: "info" })
               }}
             >
@@ -102,7 +112,12 @@ export function OverviewTab({ game }: { game: Game }) {
             <Btn
               variant="secondary"
               onClick={() => {
-                if (isTauri()) openWineTool(game.id, "taskmgr")
+                if (isTauri()) {
+                  openWineTool(game.id, "taskmgr")
+                    .then(() => toast("Opening Taskmgr", { description: "Wine task manager", tone: "info" }))
+                    .catch((e) => toast("Failed to open Taskmgr", { description: String(e), tone: "danger" }))
+                  return
+                }
                 toast("Opening Taskmgr", { description: "Wine task manager", tone: "info" })
               }}
             >
@@ -111,7 +126,12 @@ export function OverviewTab({ game }: { game: Game }) {
             <Btn
               variant="secondary"
               onClick={() => {
-                if (isTauri()) openWineTool(game.id, "winetricks")
+                if (isTauri()) {
+                  openWineTool(game.id, "winetricks")
+                    .then(() => toast("Opening Winetricks", { description: "Component and font installer", tone: "info" }))
+                    .catch((e) => toast("Failed to open Winetricks", { description: String(e), tone: "danger" }))
+                  return
+                }
                 toast("Opening Winetricks", { description: "Component and font installer", tone: "info" })
               }}
             >

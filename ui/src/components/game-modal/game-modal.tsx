@@ -131,6 +131,9 @@ function GameModalBody({ game }: { game: Game }) {
               onClick={() => {
                 if (isTauri()) {
                   openWineTool(game.id, "winetricks")
+                    .then(() => toast("Opening Winetricks", { description: `WINEPREFIX=${game.prefix.split("/").pop()}`, tone: "info" }))
+                    .catch((e) => toast("Failed to open Winetricks", { description: String(e), tone: "danger" }))
+                  return
                 }
                 toast("Opening Winetricks", { description: `WINEPREFIX=${game.prefix.split("/").pop()}`, tone: "info" })
               }}
@@ -154,7 +157,7 @@ function GameModalBody({ game }: { game: Game }) {
                 } else {
                   updateGame(game.id, (g) => ({ ...g, shortcut: !g.shortcut }))
                   toast(game.shortcut ? "Desktop shortcut removed" : "Desktop shortcut created", {
-                    description: `~/.local/share/applications/cruce-${game.id}.desktop`,
+                    description: `crucible-${game.id}.desktop`,
                     tone: game.shortcut ? "danger" : "success",
                   })
                 }

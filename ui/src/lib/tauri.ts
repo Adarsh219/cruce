@@ -1,5 +1,10 @@
 import type { AppSettings, BackupInfo, Game, Runner, ZipApplyResult } from "./types"
 
+/**
+ * Environment detection: returns true when executing within the Tauri desktop webview.
+ * When running under headless E2E test runners (e.g. Puppeteer), calls gracefully return
+ * null to prevent unhandled IPC exceptions.
+ */
 export function isTauri(): boolean {
   return typeof window !== "undefined" && Boolean((window as any).__TAURI_INTERNALS__)
 }
