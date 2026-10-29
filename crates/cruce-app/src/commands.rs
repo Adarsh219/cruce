@@ -471,8 +471,17 @@ pub fn get_runners(state: State<'_, AppState>) -> Result<Vec<Runner>, String> {
         });
     }
 
-    for src in &["ge", "umu", "cachy"] {
-        if let Ok(releases) = state.proton_manager.fetch_releases(src) {
+    let sources = ["ge", "umu", "cachy"];
+    let handles: Vec<_> = sources
+        .iter()
+        .map(|&src| {
+            let pm = state.proton_manager.clone();
+            thread::spawn(move || pm.fetch_releases(src))
+        })
+        .collect();
+
+    for h in handles {
+        if let Ok(Ok(releases)) = h.join() {
             for rel in releases.into_iter().take(6) {
                 let is_inst = installed_map.contains_key(&rel.name);
                 if !is_inst {
