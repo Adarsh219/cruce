@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Cruce
+Comment=High-Performance Proton & Wine Game Launcher
+Exec=cruce %U
+Icon=cruce
+Terminal=false
+Type=Application
+Categories=Game;Utility;
+StartupNotify=true
+StartupWMClass=cruce
+Keywords=wine;proton;gaming;steam;gamescope;umu;
